@@ -73,6 +73,11 @@ async def fetch_all_pools(client: AsyncClient) -> list:
         return []
     pools = []
     for pool in data.get("official", []) + data.get("unOfficial", []):
+        # Проверяем наличие всех нужных ключей
+        required_keys = ["baseMint", "quoteMint", "baseReserve", "quoteReserve", "lpMint"]
+        if not all(k in pool for k in required_keys):
+            print(f"Пропущен пул из-за отсутствия резервов: {pool.get('lpMint', 'unknown')}")
+            continue
         try:
             pools.append({
                 "token_a": pool["baseMint"],
