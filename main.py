@@ -57,18 +57,20 @@ def parse_lifinity_pool_data(data_b64):
     }
 
 async def fetch_all_pools(client: AsyncClient) -> list:
-    """Загрузка пулов Raydium через публичный API"""
     url = "https://api.raydium.io/v2/sdk/liquidity/mainnet.json"
-    async with httpx.AsyncClient() as http_client:
-        resp = await http_client.get(url)
-        if resp.status_code != 200:
-            print(f"Ошибка загрузки пулов Raydium: {resp.status_code} {resp.text}")
-            return []
-        try:
+    try:
+        async with httpx.AsyncClient() as http_client:
+            print("DEBUG: отправляю запрос к Raydium API...")
+            resp = await http_client.get(url, timeout=20)
+            print(f"DEBUG: статус ответа Raydium: {resp.status_code}")
+            print(f"DEBUG: первые 500 символов ответа: {resp.text[:500]}")
+            if resp.status_code != 200:
+                print(f"Ошибка загрузки пулов Raydium: {resp.status_code} {resp.text}")
+                return []
             data = resp.json()
-        except Exception as e:
-            print(f"Ошибка парсинга JSON: {e}")
-            return []
+    except Exception as e:
+        print(f"Ошибка при запросе Raydium: {e}")
+        return []
     pools = []
     for pool in data.get("official", []) + data.get("unOfficial", []):
         try:
@@ -77,12 +79,14 @@ async def fetch_all_pools(client: AsyncClient) -> list:
                 "token_b": pool["quoteMint"],
                 "reserve_a": Decimal(pool["baseReserve"]),
                 "reserve_b": Decimal(pool["quoteReserve"]),
-                "fee": Decimal(pool.get("lpFeeRate", "0")) / Decimal("100"),  # lpFeeRate обычно в процентах
+                "fee": Decimal(pool.get("lpFeeRate", "0")) / Decimal("100"),
                 "pool_mint": pool["lpMint"],
                 "dex": "raydium"
             })
-        except Exception:
+        except Exception as e:
+            print(f"Ошибка парсинга пула: {e}")
             continue
+    print(f"DEBUG: всего пулов Raydium: {len(pools)}")
     return pools
 
 
@@ -188,6 +192,7 @@ async def main():
 
     print(f"Fetching pools from {args.rpc_url}...")
     pools = await fetch_all_pools(client)
+    print(f"DEBUG: pools = {pools[:3]}")  # покажет первые 3 пула
     print(f"Loaded {len(pools)} pools")
 
     while True:
