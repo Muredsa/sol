@@ -59,9 +59,9 @@ def parse_lifinity_pool_data(data_b64):
 async def fetch_all_pools(client: AsyncClient) -> list:
     url = "https://api.raydium.io/v2/sdk/liquidity/mainnet.json"
     try:
-        async with httpx.AsyncClient() as http_client:
+        async with httpx.AsyncClient(http2=True) as http_client:
             print("DEBUG: отправляю запрос к Raydium API...")
-            resp = await http_client.get(url, timeout=20)
+            resp = await http_client.get(url, timeout=2000, verify=False)
             print(f"DEBUG: статус ответа Raydium: {resp.status_code}")
             print(f"DEBUG: первые 500 символов ответа: {resp.text[:500]}")
             if resp.status_code != 200:
